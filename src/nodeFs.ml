@@ -137,3 +137,18 @@ external writeFileSync : filename:string -> text:string -> unit = ""
 [@@bs.val] [@@bs.module "fs"]
 
 external mkdirSync : string -> unit = "" [@@bs.val] [@@bs.module "fs"]
+
+module WriteStream = struct
+  type t
+end
+
+type createWriteStreamOptions = <
+  flags : string Js.undefined;
+  defaultEncoding : string Js.undefined;
+  fd : int Js.undefined;
+  mode : int Js.undefined;
+  autoClose : bool Js.undefined;
+  start : int Js.undefined;
+> Js.undefined
+
+external createWriteStream : string -> createWriteStreamOptions -> WriteStream.t = "" [@@bs.module "fs"]
