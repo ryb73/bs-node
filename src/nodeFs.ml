@@ -141,7 +141,14 @@ external mkdirSync : string -> unit = "" [@@bs.val] [@@bs.module "fs"]
 module WriteStream = struct
   type t
 
-  external close : t -> unit = "" [@@bs.send]
+  external _close : t -> unit = "close" [@@bs.send]
+
+  type error
+  exception Exn of error
+  external on : t ->
+    ([ `error of error -> unit
+      | `open_ of unit -> unit [@bs.as "open"]
+    ] [@bs.string]) -> unit = "" [@@bs.send]
 end
 
 type createWriteStreamOptions = <
@@ -153,4 +160,41 @@ type createWriteStreamOptions = <
   start : int Js.undefined;
 > Js.undefined
 
-external createWriteStream : string -> createWriteStreamOptions -> WriteStream.t = "" [@@bs.module "fs"]
+external _createWriteStream : string -> createWriteStreamOptions -> WriteStream.t = "createWriteStream" [@@bs.module "fs"]
+
+let createWriteStream path options scope =
+  Js.Promise.make (fun ~resolve ~reject ->
+    let stream = _createWriteStream path options in
+
+    WriteStream.on stream (`error (fun err ->
+      reject (WriteStream.Exn err) [@bs]
+    ));
+
+    WriteStream.on stream (`open_ (fun () ->
+      try
+        match scope stream with
+            | None ->
+              let u = WriteStream._close stream in
+              resolve u [@bs];
+
+            | Some promise ->
+              ignore
+                (promise
+                  |> Js.Promise.then_
+                    (fun _ ->
+                      let u = WriteStream._close stream in
+                      resolve u [@bs];
+                      Js.Promise.resolve ()
+                    )
+                  |> Js.Promise.catch
+                    (fun err ->
+                      (* prevent err from being cleaned up by compiler *)
+                      ignore (Js.Promise.resolve err);
+
+                      ignore ([%bs.raw {| reject(err) |}]);
+                      Js.Promise.resolve ();
+                    ))
+      with
+        | err -> reject err [@bs]
+    ));
+  )

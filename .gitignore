@@ -3,3 +3,4 @@ lib/*
 !lib/js
 .merlin
 .bsb.lock
+.vscode
