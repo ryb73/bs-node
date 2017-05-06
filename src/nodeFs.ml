@@ -140,6 +140,8 @@ external mkdirSync : string -> unit = "" [@@bs.val] [@@bs.module "fs"]
 
 module WriteStream = struct
   type t
+
+  external close : t -> unit = "" [@@bs.send]
 end
 
 type createWriteStreamOptions = <
