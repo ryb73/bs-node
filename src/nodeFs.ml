@@ -141,7 +141,7 @@ external mkdirSync : string -> unit = "" [@@bs.val] [@@bs.module "fs"]
 module WriteStream = struct
   type t
 
-  external _close : t -> unit = "close" [@@bs.send]
+  external _end : t -> unit = "end" [@@bs.send]
 
   type error
   exception Exn of error
@@ -172,28 +172,23 @@ let createWriteStream path options scope =
 
     WriteStream.on stream (`open_ (fun () ->
       try
-        match scope stream with
-            | None ->
-              let u = WriteStream._close stream in
-              resolve u [@bs];
+        ignore (
+          scope stream
+            |> Js.Promise.then_
+              (fun _ ->
+                let u = WriteStream._end stream in
+                resolve u [@bs];
+                Js.Promise.resolve ()
+              )
+            |> Js.Promise.catch
+              (fun err ->
+                (* prevent err from being cleaned up by compiler *)
+                ignore (Js.Promise.resolve err);
 
-            | Some promise ->
-              ignore
-                (promise
-                  |> Js.Promise.then_
-                    (fun _ ->
-                      let u = WriteStream._close stream in
-                      resolve u [@bs];
-                      Js.Promise.resolve ()
-                    )
-                  |> Js.Promise.catch
-                    (fun err ->
-                      (* prevent err from being cleaned up by compiler *)
-                      ignore (Js.Promise.resolve err);
-
-                      ignore ([%bs.raw {| reject(err) |}]);
-                      Js.Promise.resolve ();
-                    ))
+                ignore ([%bs.raw {| reject(err) |}]);
+                Js.Promise.resolve ();
+              )
+        )
       with
         | err -> reject err [@bs]
     ));
