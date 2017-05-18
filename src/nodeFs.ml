@@ -138,8 +138,15 @@ external writeFileSync : filename:string -> text:string -> unit = ""
 
 external mkdirSync : string -> unit = "" [@@bs.val] [@@bs.module "fs"]
 
-module WriteStream = struct
+module type Stream = sig
   type t
+  type createOptions
+  val _create : string -> createOptions -> t
+end
+
+module MakeStream(Stream : Stream) = struct
+  module Stream = Stream
+  type t = Stream.t
 
   external _end : t -> unit = "end" [@@bs.send]
 
@@ -149,47 +156,67 @@ module WriteStream = struct
     ([ `error of error -> unit
       | `open_ of unit -> unit [@bs.as "open"]
     ] [@bs.string]) -> unit = "" [@@bs.send]
+
+  let create path options scope =
+    Js.Promise.make (fun ~resolve ~reject ->
+      let stream = Stream._create path options in
+
+      on stream (`error (fun err ->
+        reject (Exn err) [@bs]
+      ));
+
+      on stream (`open_ (fun () ->
+        try
+          ignore (
+            scope stream
+              |> Js.Promise.then_
+                (fun _ ->
+                  let u = _end stream in
+                  resolve u [@bs];
+                  Js.Promise.resolve ()
+                )
+              |> Js.Promise.catch
+                (fun err ->
+                  (* prevent err from being cleaned up by compiler *)
+                  ignore (Js.Promise.resolve err);
+
+                  ignore ([%bs.raw {| reject(err) |}]);
+                  Js.Promise.resolve ();
+                )
+          )
+        with
+          | err -> reject err [@bs]
+      ));
+    )
 end
 
-type createWriteStreamOptions = <
-  flags : string Js.undefined;
-  defaultEncoding : string Js.undefined;
-  fd : int Js.undefined;
-  mode : int Js.undefined;
-  autoClose : bool Js.undefined;
-  start : int Js.undefined;
-> Js.undefined
+module WriteStream = MakeStream(struct
+  type t
 
-external _createWriteStream : string -> createWriteStreamOptions -> WriteStream.t = "createWriteStream" [@@bs.module "fs"]
+  type createOptions = <
+    flags           : string Js.undefined;
+    defaultEncoding : string Js.undefined;
+    fd              : int Js.undefined;
+    mode            : int Js.undefined;
+    autoClose       : bool Js.undefined;
+    start           : int Js.undefined;
+  > Js.undefined
 
-let createWriteStream path options scope =
-  Js.Promise.make (fun ~resolve ~reject ->
-    let stream = _createWriteStream path options in
+  external _create : string -> createOptions -> t = "createWriteStream" [@@bs.module "fs"]
+end)
 
-    WriteStream.on stream (`error (fun err ->
-      reject (WriteStream.Exn err) [@bs]
-    ));
+module ReadStream = MakeStream(struct
+  type t
 
-    WriteStream.on stream (`open_ (fun () ->
-      try
-        ignore (
-          scope stream
-            |> Js.Promise.then_
-              (fun _ ->
-                let u = WriteStream._end stream in
-                resolve u [@bs];
-                Js.Promise.resolve ()
-              )
-            |> Js.Promise.catch
-              (fun err ->
-                (* prevent err from being cleaned up by compiler *)
-                ignore (Js.Promise.resolve err);
+  type createOptions = (<
+    flags     : string Js.undefined;
+    encoding  : string Js.undefined;
+    fd        : int Js.undefined;
+    mode      : int Js.undefined;
+    autoClose : bool Js.undefined;
+    start     : int Js.undefined;
+    _end      : int Js.undefined;
+  > Js.t) Js.undefined
 
-                ignore ([%bs.raw {| reject(err) |}]);
-                Js.Promise.resolve ();
-              )
-        )
-      with
-        | err -> reject err [@bs]
-    ));
-  )
+  external _create : string -> createOptions -> t = "createReadStream" [@@bs.module "fs"]
+end)
