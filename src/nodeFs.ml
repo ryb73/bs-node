@@ -138,31 +138,93 @@ external writeFileSync : filename:string -> text:string -> unit = ""
 
 external mkdirSync : string -> unit = "" [@@bs.val] [@@bs.module "fs"]
 
-module type Stream = sig
+module type Typed = sig
   type t
-  type createOptions
-  val _create : string -> createOptions -> t
 end
 
-module MakeStream(Stream : Stream) = struct
-  module Stream = Stream
-  type t = Stream.t
+module Stream = struct
+  type 'a t = Stream of 'a
 
-  external _end : t -> unit = "end" [@@bs.send]
+  let unbox (Stream s) = s
+
+  external __end : 'a -> unit = "end" [@@bs.send]
+  let _end s = __end @@ unbox s
 
   type error
   exception Exn of error
-  external on : t ->
+  external _on : 'a ->
     ([ `error of error -> unit
       | `open_ of unit -> unit [@bs.as "open"]
-    ] [@bs.string]) -> unit = "" [@@bs.send]
+      | `close of unit -> unit
+    ] [@bs.string]) -> unit = "on" [@@bs.send]
+
+  let _onImpl s handler = match handler with
+      | `error f -> _on s (`error f)
+      | `open_ f -> _on s (`open_ f)
+      | `close f -> _on s (`close f)
+
+  let on (Stream s) = _onImpl s
+
+  module Make(Typed : Typed) = struct
+    let toStream (s : Typed.t) = Stream s
+    let on (s : Typed.t) = _onImpl s
+    let _end (s : Typed.t) = __end s
+  end
+end
+
+module Writeable = struct
+  type 'a t = Writeable of 'a
+
+  let unbox (Writeable s) = s
+
+  module Make(Typed : Typed) = struct
+    include Stream.Make(Typed)
+
+    let writeable (s : Typed.t) = Writeable s
+  end
+end
+
+module Readable = struct
+  type 'a t = Readable of 'a
+
+  let unbox (Readable s) = s
+
+  external _pipe : 'a -> 'b -> unit = "pipe" [@@bs.send]
+  let pipe s w = _pipe (unbox s) (Writeable.unbox w)
+
+  module Make(Typed : Typed) = struct
+    include Stream.Make(Typed)
+
+    let readable (s : Typed.t) = Readable s
+    let pipe (s : Typed.t) w = _pipe s (Writeable.unbox w)
+  end
+end
+
+module FileWriteStream = struct
+  type t
+
+  type t2 = t
+  include Writeable.Make(struct
+    type t = t2
+  end)
+
+  type createOptions = <
+    flags           : string Js.undefined;
+    defaultEncoding : string Js.undefined;
+    fd              : int Js.undefined;
+    mode            : int Js.undefined;
+    autoClose       : bool Js.undefined;
+    start           : int Js.undefined;
+  > Js.undefined
+
+  external _create : string -> createOptions -> t = "createWriteStream" [@@bs.module "fs"]
 
   let create path options scope =
     Js.Promise.make (fun ~resolve ~reject ->
-      let stream = Stream._create path options in
+      let stream = _create path options in
 
       on stream (`error (fun err ->
-        reject (Exn err) [@bs]
+        reject (Stream.Exn err) [@bs]
       ));
 
       on stream (`open_ (fun () ->
@@ -170,7 +232,7 @@ module MakeStream(Stream : Stream) = struct
           ignore (
             scope stream
               |> Js.Promise.then_
-                (fun _ ->
+                (fun () ->
                   let u = _end stream in
                   resolve u [@bs];
                   Js.Promise.resolve ()
@@ -190,23 +252,13 @@ module MakeStream(Stream : Stream) = struct
     )
 end
 
-module WriteStream = MakeStream(struct
+module FileReadStream = struct
   type t
 
-  type createOptions = <
-    flags           : string Js.undefined;
-    defaultEncoding : string Js.undefined;
-    fd              : int Js.undefined;
-    mode            : int Js.undefined;
-    autoClose       : bool Js.undefined;
-    start           : int Js.undefined;
-  > Js.undefined
-
-  external _create : string -> createOptions -> t = "createWriteStream" [@@bs.module "fs"]
-end)
-
-module ReadStream = MakeStream(struct
-  type t
+  type t2 = t
+  include Readable.Make(struct
+    type t = t2
+  end)
 
   type createOptions = (<
     flags     : string Js.undefined;
@@ -218,5 +270,5 @@ module ReadStream = MakeStream(struct
     _end      : int Js.undefined;
   > Js.t) Js.undefined
 
-  external _create : string -> createOptions -> t = "createReadStream" [@@bs.module "fs"]
-end)
+  external create : string -> createOptions -> t = "createReadStream" [@@bs.module "fs"]
+end
