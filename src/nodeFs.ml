@@ -138,12 +138,13 @@ external writeFileSync : filename:string -> text:string -> unit = ""
 
 external mkdirSync : string -> unit = "" [@@bs.val] [@@bs.module "fs"]
 
-module type Typed = sig
-  type t
+module type StreamType = sig
+  type stream
+  type data
 end
 
 module Stream = struct
-  type 'a t = Stream of 'a
+  type 'stream t = Stream of 'stream
 
   let unbox (Stream s) = s
 
@@ -152,7 +153,7 @@ module Stream = struct
 
   type error
   exception Exn of error
-  external _on : 'a ->
+  external _on : 'stream ->
     ([ `error of error -> unit
       | `open_ of unit -> unit [@bs.as "open"]
       | `close of unit -> unit
@@ -165,47 +166,57 @@ module Stream = struct
 
   let on (Stream s) = _onImpl s
 
-  module Make(Typed : Typed) = struct
-    let toStream (s : Typed.t) = Stream s
-    let on (s : Typed.t) = _onImpl s
-    let _end (s : Typed.t) = __end s
+  module Make(StreamType : StreamType) = struct
+    let stream (s : StreamType.stream) = Stream s
+    let on (s : StreamType.stream) = _onImpl s
+    let _end (s : StreamType.stream) = __end s
   end
 end
 
 module Writeable = struct
-  type 'a t = Writeable of 'a
+  type ('stream, 'data) t = Writeable of 'stream
 
   let unbox (Writeable s) = s
 
-  module Make(Typed : Typed) = struct
-    include Stream.Make(Typed)
+  external _write : 'a -> 'b -> unit = "write" [@@bs.send]
+  let write (s : (_, 'data) t) (d : 'data)
+    = _write (unbox s) d
 
-    let writeable (s : Typed.t) = Writeable s
+  module Make(StreamType : StreamType) = struct
+    include Stream.Make(StreamType)
+
+    let writeable (stream : StreamType.stream) : (StreamType.stream, StreamType.data) t
+      = Writeable stream
+    let write (stream : StreamType.stream) (data : StreamType.data)
+      = _write stream data
   end
 end
 
 module Readable = struct
-  type 'a t = Readable of 'a
+  type ('stream, 'data) t = Readable of 'stream
 
   let unbox (Readable s) = s
 
-  external _pipe : 'a -> 'b -> unit = "pipe" [@@bs.send]
-  let pipe s w = _pipe (unbox s) (Writeable.unbox w)
+  external _pipe : 'instream -> 'outstream -> unit = "pipe" [@@bs.send]
+  let pipe (instream : (_, 'data) t) (outstream : (_, 'data) Writeable.t)
+    = _pipe (unbox instream) (Writeable.unbox outstream)
 
-  module Make(Typed : Typed) = struct
-    include Stream.Make(Typed)
+  module Make(StreamType : StreamType) = struct
+    include Stream.Make(StreamType)
 
-    let readable (s : Typed.t) = Readable s
-    let pipe (s : Typed.t) w = _pipe s (Writeable.unbox w)
+    let readable (s : StreamType.stream) : (StreamType.stream, StreamType.data) t
+      = Readable s
+    let pipe (instream : StreamType.stream) (outstream : (_, StreamType.data) Writeable.t)
+      = _pipe instream (Writeable.unbox outstream)
   end
 end
 
 module FileWriteStream = struct
   type t
 
-  type t2 = t
   include Writeable.Make(struct
-    type t = t2
+    type stream = t
+    type data = string
   end)
 
   type createOptions = <
@@ -233,8 +244,7 @@ module FileWriteStream = struct
             scope stream
               |> Js.Promise.then_
                 (fun () ->
-                  let u = _end stream in
-                  resolve u [@bs];
+                  resolve (_end stream) [@bs];
                   Js.Promise.resolve ()
                 )
               |> Js.Promise.catch
@@ -255,9 +265,9 @@ end
 module FileReadStream = struct
   type t
 
-  type t2 = t
   include Readable.Make(struct
-    type t = t2
+    type stream = t
+    type data = NodeStringBuffer.t
   end)
 
   type createOptions = (<
