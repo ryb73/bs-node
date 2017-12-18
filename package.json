@@ -3,11 +3,11 @@
   "version": "0.0.1",
   "description": "BuckleScript bindings to the Node.js API",
   "scripts": {
+    "start": "npm run clean && bsb -make-world -w",
     "build": "bsb -make-world",
-    "start": "bsb -make-world -w",
-    "clean": "bsb -clean-world",
     "test": "npm run build && jest",
-    "watch:jest": "jest --watchAll"
+    "watch:jest": "jest --watchAll",
+    "clean": "rm -rf lib/ && bsb -clean-world"
   },
   "repository": {
     "type": "git",

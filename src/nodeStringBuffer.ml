@@ -2,7 +2,7 @@ type t (* can be either string or buffer *)
 
 type _ stringBufferKind =
   | String :  Js.String.t stringBufferKind
-  | Buffer :  NodeBuffer.t stringBufferKind
+  | Buffer :  Node.Buffer.t stringBufferKind
 
 (** We except a good inliner will eliminate such boxing in the future *)
 let test (type a) (x : t) : (a stringBufferKind * a)=
