@@ -1,3 +1,5 @@
+open Belt.Result;
+
 module Hmac: {
   type t;
   let create: ([ | `SHA256 | `SHA512 | `SHA384 | `SHA1 | `MD5], string) => t;
@@ -69,3 +71,12 @@ module Hash: {
   let toBuffer: t => NodeBuffer.t =
     hmac => digest(hmac, Js.Nullable.undefined);
 };
+
+[@bs.module "crypto"] external _randomBytes : int => (Js.null(exn) => Node.Buffer.t => unit) => unit = "randomBytes";
+let randomBytes = (size, callback) =>
+  _randomBytes(size, (optExn, buffer) =>
+    switch (Js.Null.toOption(optExn)) {
+      | None => callback(Ok(buffer))
+      | Some(exn) => callback(Error(exn))
+    }
+  );

@@ -4,3 +4,6 @@ lib/*
 .merlin
 .bsb.lock
 .vscode
+
+# persistent package linker
+package-links.json
