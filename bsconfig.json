@@ -1,5 +1,5 @@
 {
-  "name": "bs-node",
+  "name": "@ryb73/bs-node",
   "namespace": true,
   "bsc-flags": ["-bs-no-version-header", "-bs-super-errors"],
   "sources": [

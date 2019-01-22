@@ -1,5 +1,5 @@
 {
-  "name": "bs-node",
+  "name": "@ryb73/bs-node",
   "version": "0.0.1",
   "description": "BuckleScript bindings to the Node.js API",
   "scripts": {
@@ -10,6 +10,10 @@
     "clean": "rm -rf lib/ && bsb -clean-world",
     "postinstall": "[ ! -f package-links.json ] || ppl link-file"
   },
+  "files": [
+    "/bsconfig.json",
+    "/src"
+  ],
   "repository": {
     "type": "git",
     "url": "git+https://github.com/reasonml-community/bs-node.git"
