@@ -7,7 +7,8 @@
     "build": "bsb -make-world",
     "test": "npm run build && jest",
     "watch:jest": "jest --watchAll",
-    "clean": "rm -rf lib/ && bsb -clean-world"
+    "clean": "rm -rf lib/ && bsb -clean-world",
+    "postinstall": "[ ! -f package-links.json ] || ppl link-file"
   },
   "repository": {
     "type": "git",
@@ -27,6 +28,6 @@
     "@glennsl/bs-jest": "^0.4.2"
   },
   "peerDependencies": {
-    "bs-platform": "^3.0.0"
+    "bs-platform": "^4.0.0"
   }
 }
