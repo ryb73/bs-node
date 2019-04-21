@@ -4,9 +4,10 @@ defaults: &defaults
     docker:
         - image: circleci/node:latest
 
-filter-publish: &filter-publishwhyyy
+filter-publish: &filter-publish
     filters:
-        tags: {only: /^v\d*\.\d*\.\d*/}
+        branches: { ignore: /.*/ }
+        tags: { only: /.*/ }
 
 workflows:
     version: 2
@@ -16,12 +17,12 @@ workflows:
             - hold:
                 requires: [ test ]
                 type: approval
-                <<: *filter-publishwhyyy
+                <<: *filter-publish
             - derp:
-                <<: *filter-publishwhyyy
+                <<: *filter-publish
             - publish:
                 requires: [ hold ]
-                <<: *filter-publishwhyyy
+                <<: *filter-publish
 
 jobs:
     test:
