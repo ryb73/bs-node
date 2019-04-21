@@ -6,7 +6,7 @@ defaults: &defaults
 
 filter-publish: &filter-publish
     filters:
-        branches: { ignore: /./ }
+        branches: { ignore: /.*/ }
         tags: {only: /^v\d*\.\d*\.\d*/}
 
 workflows:
