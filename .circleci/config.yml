@@ -18,11 +18,8 @@ workflows:
                 requires: [ test ]
                 type: approval
                 <<: *filter-publish
-            - fail
-            - derp:
-                <<: *filter-publish
             - publish:
-                requires: [ hold, fail ]
+                requires: [ hold ]
                 <<: *filter-publish
 
 jobs:
@@ -55,6 +52,3 @@ jobs:
         <<: *defaults
         steps:
             - run: exit 1
-    derp:
-        <<: *defaults
-        steps: [{ run: echo derp }]
