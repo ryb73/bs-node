@@ -1,6 +1,6 @@
 {
   "name": "@ryb73/bs-node",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "BuckleScript bindings to the Node.js API",
   "scripts": {
     "start": "npm run clean && bsb -make-world -w",
