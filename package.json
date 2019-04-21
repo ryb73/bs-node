@@ -33,6 +33,6 @@
     "@glennsl/bs-jest": "^0.4.2"
   },
   "peerDependencies": {
-    "bs-platform": "^4.0.0"
+    "bs-platform": "^5.0.0"
   }
 }
