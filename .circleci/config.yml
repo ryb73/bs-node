@@ -18,8 +18,9 @@ workflows:
                 requires: [ test ]
                 type: approval
                 <<: *filter-publish
+            - fail
             - publish:
-                requires: [ hold ]
+                requires: [ hold, fail ]
                 <<: *filter-publish
 
 jobs:
@@ -48,3 +49,7 @@ jobs:
                 at: *root
             - run: "echo \"//registry.npmjs.org/:_authToken=$NPM_TOKEN\" > ~/.npmrc"
             - run: npm publish
+    fail:
+        <<: *defaults
+        steps:
+            - run: exit 1
