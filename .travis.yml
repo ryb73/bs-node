@@ -1,7 +1,6 @@
 language: node_js
-cache: yarn
-node_js:
-- 11
+cache: npm
+node_js: ["11"]
 script:
 - npm i bs-platform
 - npm run build
