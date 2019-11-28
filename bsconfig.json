@@ -12,5 +12,8 @@
     } */
   ],
   "refmt": 3,
+  "warnings": {
+    "number": "+A-40-42-50-105"
+  },
   "bs-dev-dependencies": ["@glennsl/bs-jest"]
 }

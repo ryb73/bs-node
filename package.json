@@ -12,8 +12,7 @@
   },
   "files": [
     "/bsconfig.json",
-    "/src",
-    "/lib/js/src"
+    "/src"
   ],
   "repository": {
     "type": "git",
@@ -30,9 +29,10 @@
   },
   "homepage": "https://github.com/reasonml-community/bs-node#readme",
   "devDependencies": {
-    "@glennsl/bs-jest": "^0.4.2"
+    "@glennsl/bs-jest": "^0.4.8",
+    "bs-platform": "^6.0.0"
   },
   "peerDependencies": {
-    "bs-platform": "^5.0.0"
+    "bs-platform": "^5.0.0 || ^6.0.0"
   }
 }

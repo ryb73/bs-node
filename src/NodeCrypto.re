@@ -1,5 +1,3 @@
-open Belt.Result;
-
 module Hmac: {
   type t;
   let create: ([ | `SHA256 | `SHA512 | `SHA384 | `SHA1 | `MD5], string) => t;
@@ -76,7 +74,7 @@ module Hash: {
 let randomBytes = (size, callback) =>
   _randomBytes(size, (optExn, buffer) =>
     switch (Js.Null.toOption(optExn)) {
-      | None => callback(Ok(buffer))
+      | None => callback(Belt.Result.Ok(buffer))
       | Some(exn) => callback(Error(exn))
     }
   );
