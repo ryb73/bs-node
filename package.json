@@ -29,10 +29,10 @@
   },
   "homepage": "https://github.com/reasonml-community/bs-node#readme",
   "devDependencies": {
-    "@glennsl/bs-jest": "^0.4.8",
-    "bs-platform": "^6.0.0"
+    "@glennsl/bs-jest": "^0.5.1",
+    "bs-platform": "^8.0.3"
   },
   "peerDependencies": {
-    "bs-platform": "^5.0.0 || ^6.0.0"
+    "bs-platform": "5 || 6 || 7 || 8"
   }
 }
